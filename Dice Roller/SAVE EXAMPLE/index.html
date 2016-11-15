@@ -1,0 +1,469 @@
+
+<!DOCTYPE html>
+<html><head>
+    <title></title>
+    <meta charset="utf-8" />
+    
+    <script type="text/javascript">
+        //////////////
+        // Settings //
+        //////////////
+        var CanvasFilter = "#Pad" // ID of canvas which will be used to drawing.
+        var AfterBlock = "#AfterBlock";
+        var ErrorsOut = "#Fails";
+        var UpdateDelay = 40;      // Delay between updates. Recomended values: 10 - 100. Lower values - higher load CPU.
+        var TextSizeMain = 30;     // Size of text in pixels. For headers only,
+        var TextSizeData = 25;     // Size of text in pixels. For data only.
+        var FontMain = "Arial";
+        var FontData = "Arial";
+        var TextSizeScale = 0.21;
+        var LinesWidth = 5.6;      // Width of lines. Can contain floating point.
+        var CellGridSize = 60;     // Size of each cell (width and height) in notes sheet.
+        // Offsets indicate where different elements must be drawed.
+        var OffsetGlobal = { X: 20, Y: 20 };
+        var OffsetHeader = { X: OffsetGlobal.X - 7, Y: OffsetGlobal.Y + 50, Z: 40 };
+        var OffsetGrid = { X: OffsetGlobal.X + 5, Y: OffsetGlobal.Y + 95 };
+        var OffsetData = { X: OffsetGlobal.X - 1, Y: OffsetGlobal.Y + 133 };
+        var BackgroundColor = '#ffffff';
+		var ImageFileName = "print.png";
+		var PausePaint = false;
+		var SelectorsTemplate = [];
+		var TestsTemplate = [];
+		
+	    var Flags = {
+            ShowLines: false,
+            ShowHeaders: false,
+            ShowData: false,
+            ShowBackground: true,
+            ShowCoords: false,
+            FreezeCoordinates: false,
+            ShowTextBackground: false,
+            ShowIndexes: true,
+            ShowStaticImages: true,
+            ShowStaticText: true,
+            AutoCorrect: true,
+            ShowFailMessages: true,
+            ShowPoweredBy: true
+        };
+        // Text which will be drawed. Missed elements will be replaced with symbol '?'
+        var Header = ["E", "A", "D", "G", "B", "E"];
+        var Data = [
+  
+
+           
+        ];
+        // Default radius
+        var Radius = 14;
+
+
+        var Selectors = [
+		
+	
+ 
+{ X: -10.075, Y: -5,  GroupID: 1, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5,  GroupID: 2, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5,  GroupID: 3, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -10.075, Y: -5,  GroupID: 4, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5,  GroupID: 5, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5,  GroupID: 6, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5,  GroupID: 7, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5,  GroupID: 8, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -10.075, Y: -5, GroupID: 9, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -10.075, Y: -5,  GroupID: 10, ImageURI: "notec_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+
+
+//d
+
+{ X: -11.1, Y: -5, GroupID: 11, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 12, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 13, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 14, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 15, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 16, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 17, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 18, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 19, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 20, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 610, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -11.1, Y: -5, GroupID: 609, ImageURI: "noted_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+//e
+
+{ X: -12.1, Y: -5, GroupID: 21, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 22, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 23, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 24, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 25, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 26, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 27, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 28, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 29, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 30, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 607, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -12.1, Y: -5, GroupID: 608, ImageURI: "notee_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+//f
+
+{ X: -13.1, Y: -5, GroupID: 31, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5, GroupID: 32, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 33, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 34, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 35, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 36, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 37, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 38, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 39, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -13.1, Y: -5,  GroupID: 40, ImageURI: "notef_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+
+//g
+		
+{ X: -14.1, Y: -5, GroupID: 41, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 42, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 43, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 44, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 45, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 46, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 47, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 48, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 49, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 50, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 600, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -14.1, Y: -5, GroupID: 601, ImageURI: "noteg_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+
+//a
+{ X: -15.1, Y: -5, GroupID: 51, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 52, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 53, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 54, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 55, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 56, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 57, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 58, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 59, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 60, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 602, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -15.1, Y: -5, GroupID: 603, ImageURI: "notea_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+//b
+
+{ X: -16.1, Y: -5, GroupID: 61, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 62, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 63, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 64, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 65, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 66, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 67, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 68, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 69, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{X: -16.1, Y: -5, GroupID: 70, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -16.1, Y: -5, GroupID: 604, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{X: -16.1, Y: -5, GroupID: 605, ImageURI: "noteb_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+
+
+//sharps
+
+
+{X: -17.1, Y: -5,  GroupID: 71, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 72, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 73, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 74, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+		
+{ X: -17.1, Y: -5,  GroupID: 75, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 76, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 77, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 78, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 79, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 80, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 81, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 82, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 83, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 84, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 85, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 86, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 87, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 88, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 89, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },		
+
+
+{ X: -17.1, Y: -5,  GroupID: 90, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 91, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 92, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 93, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 94, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 95, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 96, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 97, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 98, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 99, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 100, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 101, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 102, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 103, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 104, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 105, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 106, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 107, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 108, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 109, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+
+{X: -17.1, Y: -5,  GroupID: 110, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 111, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 112, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 113, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+		
+{ X: -17.1, Y: -5,  GroupID: 114, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 115, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 116, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 117, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 118, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 119, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 120, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 121, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 122, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 123, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 124, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+		
+{ X: -17.1, Y: -5,  GroupID: 125, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 126, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 127, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -17.1, Y: -5,  GroupID: 128, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },		
+
+
+{ X: -17.1, Y: -5,  GroupID: 129, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 130, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 131, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 132, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 133, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 134, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 135, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 136, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 137, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 138, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 139, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 140, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 141, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 141, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 142, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 143, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 144, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 145, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 146, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -17.1, Y: -5,  GroupID: 147, ImageURI: "notefl_bl2.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+
+
+
+{ X: -19.5, Y: -5,  GroupID: 1007, ImageURI: "semi_tone_marker_r.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -19.5, Y: -5,  GroupID: 1008, ImageURI: "semi_tone_marker_r.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -19.5, Y: -5,  GroupID: 1009, ImageURI: "semi_tone_marker_r.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -19.5, Y: -5,  GroupID: 1010, ImageURI: "semi_tone_marker_r.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -18.3, Y: -5,  GroupID: 1011, ImageURI: "semi_tone_marker_l.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -18.3, Y: -5,  GroupID: 1012, ImageURI: "semi_tone_marker_l.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -18.3, Y: -5,  GroupID: 1013, ImageURI: "semi_tone_marker_l.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+{ X: -18.3, Y: -5,  GroupID: 1014, ImageURI: "semi_tone_marker_l.png", Width: 130, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },	
+
+
+
+
+
+
+
+{ X: -2.5, Y: -5,  GroupID: 2001, ImageURI: "ope_l.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -3, Y: -5,  GroupID: 2002, ImageURI: "opa.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -3.5, Y: -5,  GroupID: 2003, ImageURI: "opd.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -4, Y: -5,  GroupID: 2004, ImageURI: "opg.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -4.5, Y: -5,  GroupID: 2005, ImageURI: "opb.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+{ X: -5, Y: -5,  GroupID: 2006, ImageURI: "ope.png", Width: 30, Height: 30, RootOffsetX: 20, RootOffsetY: 10 },
+
+
+
+
+				 { X: -8.9, Y:  -5.15, R: Radius, Thickness: 2, Color: "red", GroupID: 884 },  
+			     { X: -8.1, Y:  -5.15, R: Radius, Thickness: 2, Color: "red", GroupID: 880 },
+			     { X: -7.3, Y:  -5.15, R: Radius, Thickness: 2, Color: "red", GroupID: 882 }, 
+			     { X: -6.5, Y:  -5.15, R: Radius, Thickness: 2, Color: "red", GroupID: 881 },
+	             { X: -5.7, Y:  -5.15, R: Radius, Thickness: 2, Color: "red", GroupID: 883 }, 
+				 
+				 
+				 
+				 
+	    ];
+		
+		
+		
+        var Test = [
+		
+
+			
+        ];
+		
+		
+
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.20,
+            Min: 0.1,
+            Max: 1.8,
+        };
+
+
+
+
+        var StaticImages = [
+   		   { X: 440, Y: 1600, URL: "sbvisual.png", Width: 300, Height: 154 },
+
+
+
+            // Scale change buttons
+          //  { X: 0, Y: 0, URL: "btnPlus1.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+            //{ X: 280, Y: 0, URL: "btnMinus1.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+
+
+		    { X: 320, Y: 810, URL: "sbyimings.png", Width: 200, Height: 60 },
+		    { X: 320, Y: 890, URL: "sbm2.png", Width: 200, Height: 60 },		
+
+        ];
+
+        var StaticText = [
+
+					  
+					  
+           
+        ];
+
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.20,
+            Min: 0.1,
+            Max: 1.8,
+        };
+
+        var StaticImages = [
+         
+		    { X: 890, Y: 600, URL: "sbvisual.png", Width: 300, Height: 154 },
+
+            // Scale change buttons
+            { X: 0, Y: 0, URL: "btnPlus1.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+         { X: 280, Y: 0, URL: "btnMinus1.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+			
+{ X: 800, Y: 10, URL: "save.png", Width: 40, Height: 40, Click: "Control.Save(Canvas, ImageFileName)" },
+		
+		{ X: 1, Y: 105, URL: "blank_frets_fl.png", Width: 1200, Height: 257 },			
+		{ X: 90, Y: 365, URL: "draggables.png", Width: 1070, Height: 49 },			
+		{ X: 15, Y: 372, URL: "dragbox1.png", Width: 85, Height: 55},	
+
+			
+		   ]
+        var StaticText = [
+    { X: 80, Y:  20, TextSize:  18, Font: "Arial", Color: "black", Text: "Red +      or      Blue - " },
+    { X: 105, Y:  40, TextSize:  16, Font: "Arial", Color: "black", Text: "to resize screen" },
+	{ X: 400, Y:  50, TextSize:  16, Font: "Arial", Color: "black", Text: "Learning to play and understand  the fretboard -flats" },
+
+     { X: 430, Y: 19, TextSize: 20, Font: "Arial", Color: "black", Text: "Stave Breakthrough Helpers" },
+     { X: 687, Y: 10, TextSize: 10, Font: "Arial", Color: "black", Text: "TM" },
+
+
+     { X: 660, Y: 433, TextSize:  13, Font: "Arial", Color: "black", Text: "Drag blue note names to the fretboard" },
+
+     { X: 292, Y: 433, TextSize:  13, Font: "Arial", Color: "black", Text: "Tuning: Drag red circles to the fretboard" },
+	
+
+     { X: 110, Y: 433, TextSize:  13, Font: "Arial", Color: "black", Text: "Black open string names" },
+
+
+
+     { X: 930, Y: 433, TextSize:  13, Font: "Arial", Color: "black", Text: "                        Whole Tone  /  Semitone" },
+	
+    { X: 950, Y: 450, TextSize:  13, Font: "Arial", Color: "black", Text: "                 Drag from coloured triangles" }, 
+
+
+ 
+
+
+        ];
+
+        function Resize(c) {
+            w = $(document).width();
+            n = (w - c.width) / 2;
+            $(CanvasFilter).css("left", n);
+            $(AfterBlock).css("left", n);
+            $(AfterBlock).css("top", c.height + 30);
+            $(AfterBlock).width(c.width);
+        }
+
+        var Messages = {
+            AfterInit: Resize,
+            AfterResize: Resize
+        };
+    </script>
+    <script type="text/javascript" src="Scripts/jquery-2.1.4.min.js"></script>
+
+   <script type="text/javascript" src="../Scripts/NotesSheetCore.js"></script>
+    <style type="text/css">
+        #Pad {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            border: 1px solid black;
+            margin-top: 10px;
+        }
+
+        #AfterBlock {
+            position: absolute;
+            top: 930px;
+            left: 10px;
+            width: 800px;
+            margin-top: 10px;
+        }
+
+        #DevBy{
+            font-size: 12px;
+            color: black;
+            font-style: italic;
+            margin-top: 0px;
+            margin-bottom: 20px;
+            text-align: end;
+        }
+
+        #DevBy a{
+            font-size: 18px;
+            text-decoration: none;
+        }
+
+        #Fails{
+            font-size: 16px;
+            color: #a00000;
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="Pad" width="1200" height="950">
+    <div id="AfterBlock">
+        <div id="DevBy">
+            Developed with <a href="http://aiteam.esy.es/">AI</a>'s 2D graphic engine.
+                <div id="NextPage">
+       <INPUT TYPE="button" VALUE="Back to SB Helpers" onClick="history.go(-1);"><br>
+                    <a href="http://stavebreakthrough.co.uk/helpers.html">SBHelpers Home Page</a>
+                    
+                       </div>     
+        <div id="Fails">
+
+        </div>
+    </div>
+</body>
+</html>

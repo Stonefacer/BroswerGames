@@ -1,0 +1,200 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+    <script type="text/javascript">
+        //////////////
+        // Settings //
+        //////////////
+        var CanvasFilter = "#Pad"; // ID of canvas which will be used to drawing.
+        var AfterBlock = "#AfterBlock";
+        var ErrorsOut = "#Fails";
+        var UpdateDelay = 40;      // Delay between updates. Recomended values: 10 - 100. Lower values - higher load CPU.
+        var TextSizeMain = 40;     // Size of text in pixels. For headers only,
+        var TextSizeData = 25;     // Size of text in pixels. For data only.
+        var FontMain = "Arial";
+        var FontData = "Arial";
+        var TextSizeScale = 0.21;
+        var LinesWidth = 5.6;      // Width of lines. Can contain floating point.
+        var CellGridSize = 60;     // Size of each cell (width and height) in notes sheet.
+		var BackgroundColor = '#ffffff';
+		var ImageFileName = "ImageFileName"; // will be used as a name of the image file when you saving canvas area
+		var PausePaint = false;
+        // Offsets indicate where different elements must be drawed.
+        var OffsetGlobal = { X: 20, Y: 20 };
+        var OffsetHeader = { X: OffsetGlobal.X - 7, Y: OffsetGlobal.Y + 50, Z: 40 };
+        var OffsetGrid = { X: OffsetGlobal.X + 5, Y: OffsetGlobal.Y + 95 };
+        var OffsetData = { X: OffsetGlobal.X - 1, Y: OffsetGlobal.Y + 133 };
+        var Flags = {
+            ShowLines: false,
+            ShowHeaders: false,
+            ShowData: false,
+            ShowBackground: true,
+            ShowCoords: false,
+            FreezeCoordinates: false,
+            ShowTextBackground: false,
+            ShowIndexes: false,
+            ShowStaticImages: true,
+            ShowStaticText: true,
+            AutoCorrect: true,
+            ShowFailMessages: true,
+            ShowPoweredBy: true
+        };
+        // Text which will be drawed. Missed elements will be replaced with symbol '?'
+        var Header = ["E", "A", "D", "G", "B", "E"];
+        var Data = [
+            ["F", "B?", "E?", "A?", "C", "F"],
+            ["F#", "B", "E", "A", "C#", "F#"],
+            ["G", "C", "F", "A#", "D", "G"],
+            ["G#", "C#", "F#", "B", "D#", "G#"],
+            ["A", "D", "G", "C", "E", "A"],
+            ["A#", "D#", "G#", "C#", "F", "A#"],
+			["B", "E", "A", "D", "F#", "B"],
+			["C", "F", "A#", "D#", "G", "C"],
+			["C#", "F#", "B", "E", "G#", "C#"],
+			["D", "G", "C", "F", "A", "D"],
+			["D#", "G#", "C#", "F#", "A#", "D#"],
+            ["E", "A", "D", "G", "B", "E"]
+        ];
+        // Default radius
+        var Radius = 20;
+        //var EmptyZone = Data.length + 1;
+        // Circles. Negative X and/or Y indicate that coords replaced by ids.
+        // For example: { X: -1, Y: -1, R: Radius, Thickness: 5, Color: "red", GroupID: 0 }
+        // X = -1 so circle will be placed in first column.
+        // Y = -1 so circle will be placed in first row.
+        // R = Radius so radius is default (can be changed above)
+        // Thickness = 5 so width of line is 5. If set to -1 then circle will be filled.
+        // Color = "red" so color of circle is red. You can use HEX code like #155858.
+        // GroupID = 0 circles with identical groupid move together. If set to -1 then GroupID will be ignored.
+
+        var Selectors = [
+			
+        ];
+
+        var SelectorsTemplate = [
+			{
+			    type: "matrix",
+			    X: { Start: -8, Step: -1, Count: 5 }, // is equal to X:[-8, -9, -10, -11, -12]
+			    Y: 30,
+			    StartGroupID: 0,
+			    Images: ["Images/halfbeat.png", "Images/1beat.png", "Images/2beat.png", "Images/4beat.png"],
+			    Width: [22, 14, 20, 22],
+			    Height: [38],
+			    RootOffsetX: [20],
+			    RootOffsetY: [20]
+			}
+        ];
+
+        var Test = [
+			
+        ];
+
+        var TestsTemplate = [
+            { type: "vertical", X: 2.2, Y: [-0.21, -0.14, -0.09, -0.02, 0.05], Width: [200], SelID: { Start: 0, Step: 1, Count: 5 }, Text: ["Test1", "Test2", "Test3", "Test4", "Test5"], R: [Radius], PlaySound: ["Audio/halfe.mp3", "Audio/halff.mp3", "Audio/halfg.mp3", "Audio/halfa.mp3", "Audio/halfb.mp3"], Volume: [1.0] },
+            { type: "vertical", X: 2.2, Y: [-2.81, -2.74, -2.67, -2.6, -2.53], Width: [200], SelID: { Start: 5, Step: 1, Count: 5 }, Text: [""], R: [Radius], PlaySound: ["Audio/1e.mp3", "Audio/1f.mp3", "Audio/1g.mp3", "Audio/1a.mp3", "Audio/1b.mp3"], Volume: [1.0] },
+            { type: "vertical", X: 2.2, Y: [-5.59, -5.49, -5.42, -5.35, -5.28], Width: [200], SelID: { Start: 10, Step: 1, Count: 5 }, Text: [""], R: [Radius], PlaySound: ["Audio/2e.mp3", "Audio/2f.mp3", "Audio/2g.mp3", "Audio/2a.mp3", "Audio/2b.mp3"], Volume: [1.0] },
+            { type: "vertical", X: 2.2, Y: [-8.49, -8.42, -8.35, -8.28, -8.21], Width: [200], SelID: { Start: 15, Step: 1, Count: 5 }, Text: [""], R: [Radius], PlaySound: ["Audio/4e.mp3", "Audio/4f.mp3", "Audio/4g.mp3", "Audio/4a.mp3", "Audio/4b.mp3"], Volume: [1.0] }
+        ];
+
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.05,
+            Min: 0.1,
+            Max: 1.8,
+        };
+
+        var StaticImages = [
+			
+	        { X: 30, Y: 145, URL: "Images/frerenotes.png", Width: 300, Height: 120 },
+            { X: 30, Y: 300, URL: "Images/frerenotes.png", Width: 300, Height: 120 },
+		    { X: 30, Y: 465, URL: "Images/frerenotes.png", Width: 300, Height: 120 },
+			{ X: 30, Y: 630, URL: "Images/frerenotes.png", Width: 300, Height: 120 },
+
+            // Scale change buttons
+            { X: 0, Y: 0, URL: "Images/btnPlus.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+            { X: 50, Y: 0, URL: "Images/btnMinus.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+
+            { X: 376, Y: -37, URL: "Images/img1.png", Width: 521, Height: 892 }, // renamed from 'img0.png' to 'img1.png'
+			
+			{ X: 100, Y: 100, URL: "Images/save.png", Width: 40, Height: 40, Click: "Control.Save(Canvas, ImageFileName)" },
+			
+        ];
+
+        var StaticText = [
+            { X: 160, Y: 30, TextSize: 30, Font: "Arial", Color: "red", Text: "This is static text." },
+            { X: 433, Y: 225, TextSize: 15, Font: "Arial", Color: "green", Text: "%{trs0}", HideIfDataIsUndefined: true }, // test result for selector number 0
+            { X: 495, Y: 225, TextSize: 15, Font: "Arial", Color: "green", Text: "%{trs1}", HideIfDataIsUndefined: true }, // test result for selector number 1
+            { X: 551, Y: 225, TextSize: 15, Font: "Arial", Color: "green", Text: "%{trs2}", HideIfDataIsUndefined: true }, // test result for selector number 2
+            { X: 612, Y: 225, TextSize: 15, Font: "Arial", Color: "green", Text: "%{trs3}", HideIfDataIsUndefined: true }, // test result for selector number 3
+            { X: 670, Y: 225, TextSize: 15, Font: "Arial", Color: "green", Text: "%{trs4}", HideIfDataIsUndefined: true }, // test result for selector number 4
+        ];
+
+        function Resize(c) {
+            w = $(document).width();
+            n = (w - c.width) / 2;
+            $(CanvasFilter).css("left", n);
+            $(AfterBlock).css("left", n);
+            $(AfterBlock).css("top", c.height + 30);
+            $(AfterBlock).width(c.width);
+        }
+
+        var Messages = {
+            AfterInit: Resize,
+            AfterResize: Resize
+        };
+    </script>
+    <script type="text/javascript" src="Scripts/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="Scripts/NotesSheetCore.js"></script>
+    <style type="text/css">
+        #Pad {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            border: 1px solid black;
+            margin-top: 10px;
+			background-color: #ffffff;
+        }
+
+        #AfterBlock {
+            position: absolute;
+            top: 930px;
+            left: 10px;
+            width: 800px;
+            margin-top: 10px;
+        }
+
+        #DevBy {
+            font-size: 12px;
+            color: black;
+            font-style: italic;
+            margin-top: 0px;
+            margin-bottom: 20px;
+            text-align: end;
+        }
+
+            #DevBy a {
+                font-size: 18px;
+                text-decoration: none;
+            }
+
+        #Fails {
+            font-size: 16px;
+            color: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="Pad" width="800" height="900"></canvas>
+    <div id="AfterBlock">
+        <div id="DevBy">
+            Developed with <a href="http://aiteam.esy.es/">AI</a>'s 2D graphic engine.
+        </div>
+        <div id="Fails">
+
+        </div>
+    </div>
+</body>
+</html>

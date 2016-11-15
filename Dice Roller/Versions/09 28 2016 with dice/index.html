@@ -1,0 +1,390 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+	<!--<script src="http://peterolson.github.com/BigInteger.js/BigInteger.min.js"></script>-->
+    <script type="text/javascript">
+        //////////////
+        // Settings //
+        //////////////
+        var CanvasFilter = "#Pad"; // ID of canvas which will be used to drawing.
+        var AfterBlock = "#AfterBlock";
+        var ErrorsOut = "#Fails";
+        var UpdateDelay = 30;      // Delay between updates. Recommended values: 10 - 100. Lower values - higher load CPU.
+        var TextSizeMain = 40;     // Size of text in pixels. For headers only,
+        var TextSizeData = 25;     // Size of text in pixels. For data only.
+        var FontMain = "Arial";
+        var FontData = "Arial";
+        var TextSizeScale = 0.21;
+        var LinesWidth = 5.6;      // Width of lines. Can contain floating point.
+        var CellGridSize = 60;     // Size of each cell (width and height) in notes sheet.
+		var BackgroundColor = '#cccccc';
+		var ImageFileName = "ImageFileName";	// will be used as a name of the image file when you saving canvas area
+		var PausePaint = false;
+        // Offsets indicate where different elements must be drawed.
+        var OffsetGlobal = { X: 20, Y: 20 };
+        var OffsetHeader = { X: OffsetGlobal.X - 7, Y: OffsetGlobal.Y + 50, Z: 40 };
+        var OffsetGrid = { X: OffsetGlobal.X + 5, Y: OffsetGlobal.Y + 95 };
+        var OffsetData = { X: OffsetGlobal.X - 1, Y: OffsetGlobal.Y + 133 };
+        var Flags = {
+            ShowLines: false,
+            ShowHeaders: false,
+            ShowData: false,
+            ShowBackground: true,
+            ShowCoords: false,
+            FreezeCoordinates: true,
+            ShowTextBackground: false,
+            ShowIndexes: false,
+            ShowStaticImages: true,
+            ShowStaticText: true,
+            AutoCorrect: true,
+			ResetAfterFailedTest: true,
+            ShowFailMessages: true,
+            ShowPoweredBy: true,
+			ShowDices: true,
+			UseGameEngine: false,
+			UsePixelCoordinates: true,
+			ForceFramerate: true
+        };
+        
+		var MyHandlers = {
+			RollDice: function(scope, DiceId){
+				if (scope.GameEngine.Turn.GameOver)
+                    return;
+				scope.GetImage("btnRoll" + String(DiceId)).Visible = false;
+				scope.GameEngine.Turn.Number++;
+				if (scope.GameEngine.Turn.Number % 2 == 1)
+					scope.Events.AddEvent(scope.GameEngine.TurnStart, 0);
+				LocalRand = function(){scope.GameEngine.RandDice(scope, DiceId);};
+				LocalValue = function(){scope.GameEngine.ValueChanged(scope, DiceId);};
+				for(i=0;i<scope.GameEngine.Dice.AnimationSteps;i++)
+					scope.Events.AddEvent( [LocalRand,LocalValue,1], i);
+				scope.Events.AddEvent(function(){scope.GameEngine.SaveScore(scope, DiceId);}, i + 1);
+				if (scope.GameEngine.Turn.Number % 2 === 0)
+					scope.Events.AddEvent(function(){scope.GameEngine.TurnEnd(scope, DiceId);}, i + 2);
+				scope.Events.AddEvent(1, i + 2);
+				////////////////////
+				// FOR DEBUG ONLY //
+				////////////////////
+				//scope.Events.AddEvent(CMD.Custom.RollDice, scope.GameEngine.Dice.AnimationSteps * 10 + 3);
+			}
+		};
+		
+		// game settings and logic
+		var GameEngine = {
+			//settings
+			Turn: {
+				Number: 0,
+				BlueScore: 0,
+				RedScore: 0,
+				GameOver: false
+			},
+			Dice:{
+				X: 253,
+				Y: 290,
+				MarginHorizontal: 20,
+				Count: 0, // trick to disable dice at all
+				Width: 30, 
+				Height: 30, // width and height of EACH dice
+				AnimationSteps: 10, // set 0 to disable animation
+				UseBlankImage: true, // last image in Images set
+				Images: [[]],
+				GetSummaryValue: function(scope, DiceId){
+					if (DiceId === undefined || DiceId == -1 || DiceId >= scope.GameEngine.Dice.Count){
+						res = scope.GameEngine.Dice.Count;
+						for(i=0;i<scope.GameEngine.Dice.Count;i++){
+							res+=scope.GameEngine.Dice.Values[i];
+						}
+						return res;
+					} else{
+						res = 1 + scope.GameEngine.Dice.Values[DiceId];
+						return res;
+					}
+				},
+				RandNumber: function(scope){
+					if (window.crypto !== undefined) {
+						if (scope.TypedArray === undefined) {
+							scope.TypedArray = new Uint32Array(100);
+							scope.TypedArrayId = 0;
+							window.crypto.getRandomValues(scope.TypedArray);
+						}
+						if (scope.TypedArrayId == scope.TypedArray.length - 1) {
+							window.crypto.getRandomValues(scope.TypedArray);
+							scope.TypedArrayId = 0;
+						}
+						return scope.TypedArray[scope.TypedArrayId++] % (scope.GameEngine.Dice.MaxValue - 1);
+					} else{
+						return Math.floor(Math.random()*(scope.GameEngine.Dice.MaxValue - 1));
+					}
+				},
+				GetImage: function(scope, SetId, ImageId, BlankImage = false){
+					if (SetId >= scope.GameEngine.Dice.Images.length)
+						SetId = 0;
+					if (BlankImage) {
+						if (ImageId >= scope.GameEngine.Dice.Images[SetId].length){
+							SetId = 0;
+							ImageId = scope.GameEngine.Dice.Images[SetId].length - 1;
+						}
+						return scope.GameEngine.Dice.SrcImages[SetId][ImageId];
+                    }else{
+						if (ImageId >= scope.GameEngine.Dice.Images[SetId].length)
+							ImageId = ImageId % (scope.GameEngine.Dice.Images[SetId].length - 1);
+						return scope.GameEngine.Dice.SrcImages[SetId][ImageId];
+					}
+				}
+			},
+			// logic
+			Init: function(scope){
+				scope.GameEngine = GameEngine;
+				scope.GameEngine.Dice.Values = [0];
+				for(i=0;i<scope.GameEngine.Dice.Count-1;i++){
+					scope.GameEngine.Dice.Values.push(0);
+				}
+				// load images of dice
+				scope.GameEngine.Dice.SrcImages = {};
+				scope.GameEngine.Dice.SrcImages.State = [];
+				scope.GameEngine.Dice.SrcImages = [];
+				scope.TotalImages = 0;
+				scope.GameEngine.Dice.MaxValue = scope.GameEngine.Dice.Images[0].length;
+				LocalLoader = function(){scope.loader();};
+				for(i=0;i<scope.GameEngine.Dice.Images.length;i++){
+					scope.GameEngine.Dice.SrcImages[i] = [];
+					scope.TotalImages += scope.GameEngine.Dice.Images[i].length;
+					if (scope.GameEngine.Dice.MaxValue < scope.GameEngine.Dice.Images[i].length) {
+						scope.GameEngine.Dice.MaxValue = scope.GameEngine.Dice.Images[i].length;
+                    }
+					for(j=0;j<scope.GameEngine.Dice.Images[i].length;j++){
+						scope.GameEngine.Dice.SrcImages[i][j] = new Image();
+						scope.GameEngine.Dice.SrcImages[i][j].src = scope.GameEngine.Dice.Images[i][j];
+						scope.GameEngine.Dice.SrcImages[i][j].onload = LocalLoader;
+					}
+				}
+				// add images to StaticImages array
+				X = scope.GameEngine.Dice.X;
+				Y = scope.GameEngine.Dice.Y;
+				scope.GameEngine.Dice.StaticImages = [];
+				scope.GameEngine.Dice.Values = [];
+				for(i=0;i<scope.GameEngine.Dice.Count;i++){
+					CurrentImage = {
+						X: X,
+						Y: Y,
+						Width: scope.GameEngine.Dice.Width,
+						Height: scope.GameEngine.Dice.Height,
+						Image: scope.GameEngine.Dice.GetImage(scope, i, i)
+					};
+					StaticImages.push(CurrentImage);
+					scope.GameEngine.Dice.StaticImages[i] = CurrentImage;
+					X += scope.GameEngine.Dice.Width + scope.GameEngine.Dice.MarginHorizontal;
+					scope.GameEngine.Dice.Values[i] = 0;
+				}
+			},
+			RandDice: function(scope, DiceId){
+				if (DiceId === undefined || DiceId == -1 || DiceId >= scope.GameEngine.Dice.Count) {
+					for(i=0;i<scope.GameEngine.Dice.Count;i++){
+						val = scope.GameEngine.Dice.RandNumber(scope);
+						scope.GameEngine.Dice.Values[i] = val;
+						scope.GameEngine.Dice.StaticImages[i].Image = scope.GameEngine.Dice.GetImage(scope, i, val);
+					}
+				} else{
+					val = scope.GameEngine.Dice.RandNumber(scope);
+					scope.GameEngine.Dice.Values[DiceId] = val;
+					scope.GameEngine.Dice.StaticImages[DiceId].Image = scope.GameEngine.Dice.GetImage(scope, DiceId, val);
+				}
+			},
+			SaveScore: function(scope, DiceId){
+				if (DiceId === undefined || DiceId == -1 || DiceId >= scope.GameEngine.Dice.Count){
+					if (scope.GameEngine.Turn.Number % 2 == 1) { // blue player
+						scope.GameEngine.Turn.BlueScore = scope.GameEngine.Dice.GetSummaryValue(scope, DiceId);
+					} else { // red player
+						scope.GameEngine.Turn.RedScore = scope.GameEngine.Dice.GetSummaryValue(scope, DiceId);
+					}
+					scope.GetImage("btnRoll").Visible = true;
+				} else{
+					if (scope.GameEngine.Turn.Number % 2 == 1) { // blue player
+						scope.GameEngine.Turn.BlueScore = scope.GameEngine.Dice.GetSummaryValue(scope, DiceId);
+					} else { // red player
+						scope.GameEngine.Turn.RedScore = scope.GameEngine.Dice.GetSummaryValue(scope, DiceId);
+					}
+					scope.GetImage("btnRoll" + String(DiceId)).Visible = true;
+				}
+			},
+			ValueChanged: function(scope, DiceId){
+				label = "blue player";
+				if (scope.GameEngine.Turn.Number % 2 === 0)
+					label = "red player";
+				scope.SetText(label, scope.GameEngine.Dice.GetSummaryValue(scope, DiceId));
+				scope.Events.AddEmptyEvent();
+			},
+			TurnEnd: function(scope, DiceId){
+				if (!scope.GameEngine.Dice.UseBlankImage)
+					return;
+				val = scope.GameEngine.Dice.MaxValue - 1;
+				if (DiceId === undefined || DiceId == -1 || DiceId >= scope.GameEngine.Dice.Count){
+					for(i=0;i<scope.GameEngine.Dice.Count;i++){
+						scope.GameEngine.Dice.Values[i] = val;
+						scope.GameEngine.Dice.StaticImages[i].Image = scope.GameEngine.Dice.GetImage(scope, i, val, true);
+					}
+				} else{
+					scope.GameEngine.Dice.Values[DiceId] = val;
+					scope.GameEngine.Dice.StaticImages[DiceId].Image = scope.GameEngine.Dice.GetImage(scope, DiceId, val, true);
+				}
+			},
+			TurnStart: function(scope){
+				scope.SetText("red player", "");
+			}
+		};
+		
+        var Radius = 60;
+        var Selectors = [];
+        var SelectorsTemplate = [
+			{
+			    type: "horizontal",
+			    X: { Start: 100, Step: 100, Count: 7 }, // is equal to X:[-8, -9, -10, -11, -12]
+			    Y: 280,
+			    StartGroupID: 0,
+			    Images: [
+						 "Images/slide0.jpg",
+						 "Images/slide1.jpg",
+						 "Images/slide2.jpg",
+						 "Images/slide3.jpg",
+						 "Images/slide4.jpg",
+						 "Images/slide5.jpg",
+						 "Images/slide6.jpg"
+						],
+			    Width: [75],
+			    Height: [113],
+				R: [60],
+			    RootOffsetX: [37.5],
+			    RootOffsetY: [56.5]
+			},
+			{
+			    type: "horizontal",
+			    X: { Start: 100, Step: 100, Count: 7 }, // is equal to X:[-8, -9, -10, -11, -12]
+			    Y: 280,
+			    StartGroupID: 7,
+			    Images: [
+						 "Images/slide0.jpg",
+						 "Images/slide1.jpg",
+						 "Images/slide2.jpg",
+						 "Images/slide3.jpg",
+						 "Images/slide4.jpg",
+						 "Images/slide5.jpg",
+						 "Images/slide6.jpg"
+						],
+			    Width: [75],
+			    Height: [113],
+				R: [60],
+			    RootOffsetX: [37.5],
+			    RootOffsetY: [56.5]
+			}
+		];
+        var Test = [
+			
+		];
+        var TestsTemplate = [
+			{ type: "horizontal", X: [350, 450], Y: 100, Width:[0], Height: [20], SelID: [{ Start: 0, Step: 1, Count: 14 }], Text: ["Test"], R: [Radius] }
+		];
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.05,
+            Min: 0.1,
+            Max: 1.8,
+        };
+        var StaticImages = [
+			// background
+			//{ X: 0, Y: 0, URL: "Images/background.png", Width: 750, Height: 360 },
+            // Scale change buttons
+            { X: 0, Y: 0, URL: "Images/btnPlus.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+            { X: 50, Y: 0, URL: "Images/btnMinus.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+			// Save button
+			{ X: 100, Y: 0, URL: "Images/save.png", Width: 40, Height: 40, Click: "Control.Save(Canvas, ImageFileName)" },
+			// reset button
+			{ X: 550, Y: 85, URL: "Images/btn_reset.png", Visible: true, Width: 40, Height: 22, Click: "Control.ResetSelectorsMovement(scope)", Name: "btnRoll4" },
+			// place holders
+			{ X: 310, Y: 42, URL: "Images/place_holder.png", Visible: true, Width: 80, Height: 118 },
+			{ X: 410, Y: 42, URL: "Images/place_holder.png", Visible: true, Width: 80, Height: 118 },
+			// Rolling button
+			//{ X: 249, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope, 0)", Name: "btnRoll0" },
+			//{ X: 298, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope, 1)", Name: "btnRoll1" },
+			//{ X: 347, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope, 2)", Name: "btnRoll2" },
+			//{ X: 396, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope, 3)", Name: "btnRoll3" },
+			//{ X: 445, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope, 4)", Name: "btnRoll4" },
+			//{X: 20, Y: 50, URL:"Images/slide0.jpg", Visible: true, Width: 75, Height: 113, Click: "Custom.RollDice(scope, _source)", Name: "Place0"},
+			//{X: 100, Y: 50, URL:"Images/slide0.jpg", Visible: true, Width: 75, Height: 113, Click: "Custom.RollDice(scope, _source)", Name: "Place1"}
+			
+        ];
+        var StaticText = [
+            //{ X: 160, Y: 30, TextSize: 30, Font: "Arial", Color: "black", Text: "Dice Roller" },
+			{ X: 187.5, Y: 325, TextSize: 30, Font: "Arial", Color: "blue", Text: "", Name: "blue player"},
+			{ X: 562.5, Y: 325, TextSize: 30, Font: "Arial", Color: "red", Text: "", Name: "red player"},
+			{ X: 75, Y: 120, TextSize: 70, Font: "Comic Sans MS, Times New Roman", Color: "black", Text: "", Name: "lblWon"}
+        ];
+        function Resize(c) {
+            w = $(document).width();
+            n = (w - c.width) / 2;
+            $(CanvasFilter).css("left", n);
+            $(AfterBlock).css("left", n);
+            $(AfterBlock).css("top", c.height + 30);
+            $(AfterBlock).width(c.width);
+        }
+        var Messages = {
+            AfterInit: Resize,
+            AfterResize: Resize,
+			BeforeInit: GameEngine.Init
+        };
+    </script>
+    <script type="text/javascript" src="Scripts/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="Scripts/NotesSheetCoreDebug.js"></script>
+    <style type="text/css">
+        #Pad {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            border: 1px solid black;
+            margin-top: 10px;
+			background-color: #ffffff;
+        }
+        #AfterBlock {
+            position: absolute;
+            top: 930px;
+            left: 10px;
+            width: 800px;
+            margin-top: 10px;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select:none;
+			user-select:none;
+			-o-user-select:none;
+        }
+        #DevBy {
+            font-size: 12px;
+            color: black;
+            font-style: italic;
+            margin-top: 0px;
+            margin-bottom: 20px;
+            text-align: end;
+        }
+		#DevBy a {
+			font-size: 18px;
+			text-decoration: none;
+		}
+        #Fails {
+            font-size: 16px;
+            color: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <div><canvas id="Pad" width="800" height="400"></canvas></div>
+    <div id="AfterBlock">
+        <div id="DevBy">
+            Developed with <a href="http://ai.byethost9.com/" target="_blank">AI</a>'s 2D graphic engine.
+        </div>
+        <div id="Fails">
+
+        </div>
+    </div>
+</body>
+</html>

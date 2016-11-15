@@ -1,0 +1,442 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+    <script type="text/javascript">
+        //////////////
+        // Settings //
+        //////////////
+        var CanvasFilter = "#Pad"; // ID of canvas which will be used to drawing.
+        var AfterBlock = "#AfterBlock";
+        var ErrorsOut = "#Fails";
+        var UpdateDelay = 40;      // Delay between updates. Recommended values: 10 - 100. Lower values - higher load CPU.
+        var TextSizeMain = 40;     // Size of text in pixels. For headers only,
+        var TextSizeData = 25;     // Size of text in pixels. For data only.
+        var FontMain = "Arial";
+        var FontData = "Arial";
+        var TextSizeScale = 0.21;
+        var LinesWidth = 5.6;      // Width of lines. Can contain floating point.
+        var CellGridSize = 60;     // Size of each cell (width and height) in notes sheet.
+		var BackgroundColor = '#ffffff';
+		var ImageFileName = "ImageFileName";	// will be used as a name of the image file when you saving canvas area
+		var PausePaint = false;
+        // Offsets indicate where different elements must be drawed.
+        var OffsetGlobal = { X: 20, Y: 20 };
+        var OffsetHeader = { X: OffsetGlobal.X - 7, Y: OffsetGlobal.Y + 50, Z: 40 };
+        var OffsetGrid = { X: OffsetGlobal.X + 5, Y: OffsetGlobal.Y + 95 };
+        var OffsetData = { X: OffsetGlobal.X - 1, Y: OffsetGlobal.Y + 133 };
+        var Flags = {
+            ShowLines: false,
+            ShowHeaders: false,
+            ShowData: false,
+            ShowBackground: true,
+            ShowCoords: false,
+            FreezeCoordinates: false,
+            ShowTextBackground: false,
+            ShowIndexes: false,
+            ShowStaticImages: true,
+            ShowStaticText: true,
+            AutoCorrect: true,
+            ShowFailMessages: true,
+            ShowPoweredBy: true,
+			ShowDices: true,
+			UseGameEngine: true
+        };
+        
+		var MyHandlers = {
+			RollDice: function(scope){
+				if (scope.GameEngine.Turn.GameOver)
+                    return;
+				scope.GetImage("btnRoll").Visible = false;
+				scope.GameEngine.Turn.Number++;
+				for(i=0;i<scope.GameEngine.Dice.AnimationSteps;i++){
+					scope.Events.AddEvent([scope.GameEngine.RandDice, scope.GameEngine.ValueChanged], i*10);
+				}
+				scope.Events.AddEvent(scope.GameEngine.SaveScore, scope.GameEngine.Dice.AnimationSteps*10+1);
+				if (scope.GameEngine.Turn.Number % 2 == 0)
+					scope.Events.AddEvent(scope.GameEngine.CheckScore, scope.GameEngine.Dice.AnimationSteps*10 + 2);
+				scope.Events.AddEmptyEvent();
+				////////////////////
+				// FOR DEBUG ONLY //
+				////////////////////
+				//scope.Events.AddEvent(CMD.Custom.RollDice, scope.GameEngine.Dice.AnimationSteps * 10 + 3);
+			},
+			StartNewGame: function(scope){
+				scope.GameEngine.Turn.BlueScore = 0;
+				scope.GameEngine.Turn.RedScore = 0;
+				scope.GameEngine.Turn.Number = 0;
+				scope.GameEngine.Turn.GameOver = false;
+				scope.GameEngine.ProgressBalls.Blue.Points = scope.GameEngine.ProgressBalls.Blue.StartPoints;
+				scope.GameEngine.ProgressBalls.Red.Points = scope.GameEngine.ProgressBalls.Red.StartPoints;
+				scope.GameEngine.ProgressBalls.Reset(scope);
+				scope.GameEngine.ProgressBalls.Blue.UpdateData(scope);
+				scope.GameEngine.ProgressBalls.Red.UpdateData(scope);
+				scope.GameEngine.ProgressBalls.UpdateImages(scope);
+				btnRoll = scope.GetImage("btnRoll");
+				btnNewGame = scope.GetImage("btnNewGame");
+				btnRoll.Visible = true;
+				btnNewGame.Visible = false;
+				lblWon = scope.GetLabel("lblWon");
+				lblWon.Text = "";
+				scope.Events.AddEmptyEvent();
+			}
+		};
+		
+		// game settings and logic
+		var GameEngine = {
+			//settings
+			Turn: {
+				Number: 0,
+				BlueScore: 0,
+				RedScore: 0,
+				GameOver: false
+			},
+			Dice:{
+				X: 335,
+				Y: 290,
+				MarginHorisontal: 5,
+				Count: 2,
+				Width: 30, 
+				Height: 30, // width and height of EACH dice
+				AnimationSteps: 10, // set 0 to disable animation
+				Images: [
+					"Images/dice1.png",
+					"Images/dice2.png",
+					"Images/dice3.png",
+					"Images/dice4.png",
+					"Images/dice5.png",
+					"Images/dice6.png"
+				],
+				GetSummaryValue: function(scope){
+					res = scope.GameEngine.Dice.Count;
+					for(i=0;i<scope.GameEngine.Dice.Count;i++){
+						res+=scope.GameEngine.Dice.Values[i];
+					}
+					return res;
+				}
+			},
+			ProgressBalls:{
+				Blue:{
+					StartPoints: 5,
+					X: 22,
+					Y: 177,
+					Width: 25,
+					Height: 25,
+					Margin: 2,
+					Count: 12,
+					ImageURL: "Images/blue_ball.png"
+				},
+				Red:{
+					StartPoints: 5,
+					X: 400,
+					Y: 177,
+					Width: 25,
+					Height: 25,
+					Margin: 2.5,
+					Count: 12,
+					ImageURL: "Images/red_ball.png"
+				}
+			},
+			// logic
+			Init(scope){
+				scope.GameEngine = GameEngine;
+				scope.GameEngine.ProgressBalls.Blue.Points = scope.GameEngine.ProgressBalls.Blue.StartPoints;
+				scope.GameEngine.ProgressBalls.Red.Points = scope.GameEngine.ProgressBalls.Red.StartPoints;
+				scope.GameEngine.Dice.Values = [0];
+				for(i=0;i<scope.GameEngine.Dice.Count-1;i++){
+					scope.GameEngine.Dice.Values.push(0);
+				}
+				// load images of dice
+				scope.GameEngine.Dice.SrcImages = {};
+				scope.GameEngine.Dice.SrcImages.State = [];
+				scope.GameEngine.Dice.SrcImages = [];
+				scope.TotalImages = 6;
+				for(i=0;i<6;i++){
+					scope.GameEngine.Dice.SrcImages[i] = new Image();
+					scope.GameEngine.Dice.SrcImages[i].src = scope.GameEngine.Dice.Images[i];
+					scope.GameEngine.Dice.SrcImages[i].onload = function(){scope.loader();};
+				}
+				// add images to StaticImages array
+				X = scope.GameEngine.Dice.X;
+				Y = scope.GameEngine.Dice.Y;
+				scope.GameEngine.Dice.StaticImages = [];
+				scope.GameEngine.Dice.Values = [];
+				for(i=0;i<scope.GameEngine.Dice.Count;i++){
+					CurrentImage = {
+						X: X,
+						Y: Y,
+						Width: scope.GameEngine.Dice.Width,
+						Height: scope.GameEngine.Dice.Height,
+						Image: scope.GameEngine.Dice.SrcImages[0]
+					};
+					StaticImages.push(CurrentImage);
+					scope.GameEngine.Dice.StaticImages[i] = CurrentImage;
+					X += scope.GameEngine.Dice.Width + scope.GameEngine.Dice.MarginHorisontal;
+					scope.GameEngine.Dice.Values[i] = 0;
+				}
+				// initializing progress balls
+				scope.GameEngine.ProgressBalls.MaxPoints =
+					scope.GameEngine.ProgressBalls.Blue.Count + scope.GameEngine.ProgressBalls.Red.Count;
+				scope.GameEngine.ProgressBalls.GetPointsCount = function(scope){
+					return scope.GameEngine.ProgressBalls.Blue.Points + scope.GameEngine.ProgressBalls.Red.Points;
+				};
+				scope.GameEngine.ProgressBalls.Blue.PointsRegister = [];
+				scope.GameEngine.ProgressBalls.Red.PointsRegister = [];
+				i=0;
+				for(;i<scope.GameEngine.ProgressBalls.Blue.Points;i++)
+					scope.GameEngine.ProgressBalls.Blue.PointsRegister[i] = 0;
+				for(;i<scope.GameEngine.ProgressBalls.Blue.MaxCount;i++)
+					scope.GameEngine.ProgressBalls.Blue.PointsRegister[i] = -1;
+				for(;i<scope.GameEngine.ProgressBalls.Red.Points;i++)
+					scope.GameEngine.ProgressBalls.Red.PointsRegister[i] = 1;
+				for(;i<scope.GameEngine.ProgressBalls.Red.MaxCount;i++)
+					scope.GameEngine.ProgressBalls.Red.PointsRegister[i] = -1;
+				// load images
+				scope.TotalImages+=2;
+				scope.GameEngine.ProgressBalls.SrcImages = [new Image(), new Image()];
+				scope.GameEngine.ProgressBalls.SrcImages[0].src = scope.GameEngine.ProgressBalls.Blue.ImageURL;
+				scope.GameEngine.ProgressBalls.SrcImages[0].onload = scope.loader;
+				scope.GameEngine.ProgressBalls.SrcImages[1].src = scope.GameEngine.ProgressBalls.Red.ImageURL;
+				scope.GameEngine.ProgressBalls.SrcImages[1].onload = scope.loader;
+				// add StaticImages
+				scope.GameEngine.CreateStaticImages(scope, scope.GameEngine.ProgressBalls.Blue);
+				scope.GameEngine.CreateStaticImages(scope, scope.GameEngine.ProgressBalls.Red);
+				scope.GameEngine.ProgressBalls.Blue.UpdateData = function(scope){
+					obj = scope.GameEngine.ProgressBalls.Blue;
+					for(i=0;i<obj.Points && i < obj.Count;i++){
+						obj.PointsRegister[i] = 0;
+					}
+					if (obj.Points > obj.Count) {
+						for(i=0;i<(obj.Points - obj.Count) && i < scope.GameEngine.ProgressBalls.Red.Count;i++){
+							scope.GameEngine.ProgressBalls.Red.PointsRegister[i] = 0;
+						}
+                    }
+				};
+				scope.GameEngine.ProgressBalls.Red.UpdateData = function(scope){
+					obj = scope.GameEngine.ProgressBalls.Red;
+					for(i=0;i<obj.Points && i < obj.Count;i++){
+						obj.PointsRegister[obj.Count - i - 1] = 1;
+					}
+					if (obj.Points > obj.Count) {
+						for(i=0;i<(obj.Points - obj.Count) && i < scope.GameEngine.ProgressBalls.Blue.Count;i++){
+							scope.GameEngine.ProgressBalls.Blue.PointsRegister[scope.GameEngine.ProgressBalls.Blue.Count - i - 1] = 1;
+						}
+                    }
+				};
+				scope.GameEngine.ProgressBalls.UpdateImages = function(scope){
+					obj = scope.GameEngine.ProgressBalls.Blue;
+					for(i=0;i<obj.Count;i++){
+						if (obj.PointsRegister[i] == -1)
+                            continue;
+						obj.StaticImages[i].Image = scope.GameEngine.ProgressBalls.SrcImages[obj.PointsRegister[i]];
+					}
+					obj = scope.GameEngine.ProgressBalls.Red;
+					for(i=0;i<obj.Count;i++){
+						if (obj.PointsRegister[i] == -1)
+                            continue;
+						obj.StaticImages[i].Image = scope.GameEngine.ProgressBalls.SrcImages[obj.PointsRegister[i]];
+					}
+				};
+				scope.GameEngine.ProgressBalls.Reset = function(scope){
+					obj = scope.GameEngine.ProgressBalls.Blue;
+					for(i=0;i<obj.Count;i++){
+						obj.PointsRegister[i] = -1;
+						obj.StaticImages[i].Image = undefined;
+					}
+					obj = scope.GameEngine.ProgressBalls.Red;
+					for(i=0;i<obj.Count;i++){
+						obj.PointsRegister[i] = -1;
+						obj.StaticImages[i].Image = undefined;
+					}
+				};
+				scope.GameEngine.ProgressBalls.Blue.UpdateData(scope);
+				scope.GameEngine.ProgressBalls.Red.UpdateData(scope);
+				scope.GameEngine.ProgressBalls.UpdateImages(scope);
+			},
+			CreateStaticImages: function(scope, obj){
+				obj.StaticImages = [];
+				X = obj.X;
+				Y = obj.Y;
+				for(i=0;i<obj.Count;i++){
+					CurrentImage ={
+						X: X,
+						Y: Y,
+						Width: obj.Width,
+						Height: obj.Height
+					};
+					X += obj.Width + obj.Margin;
+					obj.StaticImages.push(CurrentImage);
+					StaticImages.push(CurrentImage);
+				}
+			},
+			RandDice: function(scope){
+				for(i=0;i<scope.GameEngine.Dice.Count;i++){
+					val = Math.floor(Math.random()*6);
+					scope.GameEngine.Dice.Values[i] = val;
+					scope.GameEngine.Dice.StaticImages[i].Image = scope.GameEngine.Dice.SrcImages[val];
+				}
+			},
+			ValueChanged: function(scope){
+				label = "blue player";
+				if (scope.GameEngine.Turn.Number % 2 == 0)
+					label = "red player";
+				scope.SetText(label, scope.GameEngine.Dice.GetSummaryValue(scope));
+				scope.Events.AddEmptyEvent();
+			},
+			SaveScore: function(scope){
+				if (scope.GameEngine.Turn.Number % 2 == 1) { // blue player
+					scope.GameEngine.Turn.BlueScore = scope.GameEngine.Dice.GetSummaryValue(scope);
+                } else { // red player
+					scope.GameEngine.Turn.RedScore = scope.GameEngine.Dice.GetSummaryValue(scope);
+				}
+				scope.GetImage("btnRoll").Visible = true;
+			},
+			CheckScore: function(scope){
+				if (scope.GameEngine.Turn.RedScore * scope.GameEngine.Turn.BlueScore == 0)
+					throw new Error("Incorrect score!");
+				if (scope.GameEngine.Turn.BlueScore>scope.GameEngine.Turn.RedScore) {
+					scope.GameEngine.ProgressBalls.Blue.Points++;
+					if (scope.GameEngine.ProgressBalls.Blue.Points >= scope.GameEngine.ProgressBalls.Blue.Count + scope.GameEngine.ProgressBalls.Red.Count)
+						scope.GameEngine.Turn.GameOver = true;
+					if (scope.GameEngine.ProgressBalls.GetPointsCount(scope)>scope.GameEngine.ProgressBalls.MaxPoints)
+						scope.GameEngine.ProgressBalls.Red.Points--;
+                } else if (scope.GameEngine.Turn.BlueScore<scope.GameEngine.Turn.RedScore) {
+					scope.GameEngine.ProgressBalls.Red.Points++;
+					if (scope.GameEngine.ProgressBalls.Red.Points >= scope.GameEngine.ProgressBalls.Blue.Count + scope.GameEngine.ProgressBalls.Red.Count)
+						scope.GameEngine.Turn.GameOver = true;
+					if (scope.GameEngine.ProgressBalls.GetPointsCount(scope)>scope.GameEngine.ProgressBalls.MaxPoints)
+						scope.GameEngine.ProgressBalls.Blue.Points--;
+                }
+				scope.GameEngine.ProgressBalls.Blue.UpdateData(scope);
+					scope.GameEngine.ProgressBalls.Red.UpdateData(scope);
+				scope.GameEngine.ProgressBalls.UpdateImages(scope);
+				scope.GameEngine.Turn.BlueScore = 0;
+				scope.GameEngine.Turn.RedScore = 0;
+				////////////////////
+				// FOR DEBUG ONLY //
+				////////////////////
+				//console.log(scope.GameEngine.ProgressBalls.Blue.Points, ";",
+							//scope.GameEngine.ProgressBalls.Red.Points,  ";",
+							//scope.GameEngine.ProgressBalls.GetPointsCount(scope));
+				if (scope.GameEngine.Turn.GameOver == true)
+                    scope.GameEngine.GameOver(scope);
+			},
+			GameOver: function(scope){
+				lbl = scope.GetLabel("lblWon");
+				if (lbl === undefined)
+                    return;
+				if (scope.GameEngine.ProgressBalls.Blue.Points == scope.GameEngine.ProgressBalls.MaxPoints){
+					lbl.Color = "blue",
+					lbl.Text = "Blue player WON!!!"
+                } else{
+					lbl.Color = "red",
+					lbl.Text = "Red player WON!!!"
+				}
+				scope.GameEngine.Turn.GameOver = true;
+				scope.Events.AddEmptyEvent();
+				btnRoll = scope.GetImage("btnRoll");
+				btnNewGame = scope.GetImage("btnNewGame");
+				btnRoll.Visible = false;
+				btnNewGame.Visible = true;
+				scope.Events.AddEmptyEvent();
+			}
+		};
+		
+        var Radius = 20;
+        var Selectors = [];
+        var SelectorsTemplate = [];
+        var Test = [];
+        var TestsTemplate = [];
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.05,
+            Min: 0.1,
+            Max: 1.8,
+        };
+        var StaticImages = [
+			// background
+			{ X: 0, Y: 0, URL: "Images/background.png", Width: 750, Height: 360 },
+            // Scale change buttons
+            { X: 0, Y: 0, URL: "Images/btnPlus.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+            { X: 50, Y: 0, URL: "Images/btnMinus.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+			// Save button
+			{ X: 100, Y: 0, URL: "Images/save.png", Width: 40, Height: 40, Click: "Control.Save(Canvas, ImageFileName)" },
+			// Rolling button
+			{ X: 348, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope)", Name: "btnRoll" },
+			{ X: 342.5, Y: 325, URL: "Images/new_game.png", Visible: false, Width: 51.3, Height: 22, Click: "Custom.StartNewGame(scope)", Name: "btnNewGame" },
+        ];
+        var StaticText = [
+            //{ X: 160, Y: 30, TextSize: 30, Font: "Arial", Color: "black", Text: "Dice Roller" },
+			{ X: 187.5, Y: 325, TextSize: 30, Font: "Arial", Color: "blue", Text: "", Name: "blue player"},
+			{ X: 562.5, Y: 325, TextSize: 30, Font: "Arial", Color: "red", Text: "", Name: "red player"},
+			{ X: 75, Y: 120, TextSize: 70, Font: "Comic Sans MS, Times New Roman", Color: "black", Text: "", Name: "lblWon"}
+        ];
+        function Resize(c) {
+            w = $(document).width();
+            n = (w - c.width) / 2;
+            $(CanvasFilter).css("left", n);
+            $(AfterBlock).css("left", n);
+            $(AfterBlock).css("top", c.height + 30);
+            $(AfterBlock).width(c.width);
+        }
+        var Messages = {
+            AfterInit: Resize,
+            AfterResize: Resize,
+			BeforeInit: GameEngine.Init
+        };
+    </script>
+    <script type="text/javascript" src="Scripts/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="Scripts/NotesSheetCoreDebug.js"></script>
+    <style type="text/css">
+        #Pad {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            border: 1px solid black;
+            margin-top: 10px;
+			background-color: #ffffff;
+        }
+        #AfterBlock {
+            position: absolute;
+            top: 930px;
+            left: 10px;
+            width: 800px;
+            margin-top: 10px;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select:none;
+			user-select:none;
+			-o-user-select:none;
+        }
+        #DevBy {
+            font-size: 12px;
+            color: black;
+            font-style: italic;
+            margin-top: 0px;
+            margin-bottom: 20px;
+            text-align: end;
+        }
+		#DevBy a {
+			font-size: 18px;
+			text-decoration: none;
+		}
+        #Fails {
+            font-size: 16px;
+            color: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <div><canvas id="Pad" width="750" height="360"></canvas></div>
+    <div id="AfterBlock">
+        <div id="DevBy">
+            Developed with <a href="http://ai.byethost9.com/" target="_blank">AI</a>'s 2D graphic engine.
+        </div>
+        <div id="Fails">
+
+        </div>
+    </div>
+</body>
+</html>

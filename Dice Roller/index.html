@@ -1,0 +1,190 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+	<!--<script src="http://peterolson.github.com/BigInteger.js/BigInteger.min.js"></script>-->
+    <script type="text/javascript">
+        //////////////
+        // Settings //
+        //////////////
+        var CanvasFilter = "#Pad"; // ID of canvas which will be used to drawing.
+        var AfterBlock = "#AfterBlock";
+        var ErrorsOut = "#Fails";
+        var UpdateDelay = 30;      // Delay between updates. Recommended values: 10 - 100. Lower values - higher load CPU.
+        var TextSizeMain = 40;     // Size of text in pixels. For headers only,
+        var TextSizeData = 25;     // Size of text in pixels. For data only.
+        var FontMain = "Arial";
+        var FontData = "Arial";
+        var TextSizeScale = 0.21;
+        var LinesWidth = 5.6;      // Width of lines. Can contain floating point.
+        var CellGridSize = 60;     // Size of each cell (width and height) in notes sheet.
+		var BackgroundColor = '#cccccc';
+		var ImageFileName = "ImageFileName";	// will be used as a name of the image file when you saving canvas area
+		var PausePaint = false;
+        // Offsets indicate where different elements must be drawed.
+        var OffsetGlobal = { X: 20, Y: 20 };
+        var OffsetHeader = { X: OffsetGlobal.X - 7, Y: OffsetGlobal.Y + 50, Z: 40 };
+        var OffsetGrid = { X: OffsetGlobal.X + 5, Y: OffsetGlobal.Y + 95 };
+        var OffsetData = { X: OffsetGlobal.X - 1, Y: OffsetGlobal.Y + 133 };
+        var Flags = {
+            ShowLines: false,
+            ShowHeaders: false,
+            ShowData: false,
+            ShowBackground: true,
+            ShowCoords: false,
+            FreezeCoordinates: true,
+            ShowTextBackground: false,
+            ShowIndexes: false,
+            ShowStaticImages: true,
+            ShowStaticText: true,
+            AutoCorrect: true,
+			ResetAfterFailedTest: true,
+            ShowFailMessages: true,
+            ShowPoweredBy: true,
+			ShowDices: true,
+			UseGameEngine: false,
+			UsePixelCoordinates: true,
+			ForceFramerate: true
+        };
+		
+        var Radius = 60;
+        var Selectors = [];
+        var SelectorsTemplate = [
+			{
+			    type: "horizontal",
+			    X: { Start: 100, Step: 100, Count: 7 }, // is equal to X:[-8, -9, -10, -11, -12]
+			    Y: 280,
+			    StartGroupID: 0,
+			    Images: [
+						 "Images/slide0.jpg",
+						 "Images/slide1.jpg",
+						 "Images/slide2.jpg",
+						 "Images/slide3.jpg",
+						 "Images/slide4.jpg",
+						 "Images/slide5.jpg",
+						 "Images/slide6.jpg"
+						],
+			    Width: [75],
+			    Height: [113],
+				R: [60],
+			    RootOffsetX: [37.5],
+			    RootOffsetY: [56.5]
+			},
+			{
+			    type: "horizontal",
+			    X: { Start: 100, Step: 100, Count: 7 }, // is equal to X:[-8, -9, -10, -11, -12]
+			    Y: 280,
+			    StartGroupID: 7,
+			    Images: [
+						 "Images/slide0.jpg",
+						 "Images/slide1.jpg",
+						 "Images/slide2.jpg",
+						 "Images/slide3.jpg",
+						 "Images/slide4.jpg",
+						 "Images/slide5.jpg",
+						 "Images/slide6.jpg"
+						],
+			    Width: [75],
+			    Height: [113],
+				R: [60],
+			    RootOffsetX: [37.5],
+			    RootOffsetY: [56.5]
+			}
+		];
+        var Test = [];
+		var OffsetTemp = 250;
+        var TestsTemplate = [
+			{ type: "horizontal", X: [350, 450], Y: 100, Width: [0], Height: [20], SelID: [{ Start: 0, Step: 1, Count: 14 }], Text: ["Test"], R: [Radius] }
+		];
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.05,
+            Min: 0.1,
+            Max: 1.8,
+        };
+        var StaticImages = [
+            // Scale change buttons
+            { X: 0, Y: 0, URL: "Images/btnPlus.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+            { X: 50, Y: 0, URL: "Images/btnMinus.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+			// Save button
+			{ X: 100, Y: 0, URL: "Images/save.png", Width: 40, Height: 40, Click: "Control.Save(Canvas, ImageFileName)" },
+			// reset button
+			{ X: 550, Y: 85, URL: "Images/btn_reset.png", Visible: true, Width: 40, Height: 22, Click: "Control.ResetSelectorsMovement(scope)", Name: "btnRoll4" },
+			// place holders
+			{ X: 310, Y: 42, URL: "Images/place_holder.png", Visible: true, Width: 80, Height: 118 },
+			{ X: 410, Y: 42, URL: "Images/place_holder.png", Visible: true, Width: 80, Height: 118 }
+        ];
+        var StaticText = [
+            //{ X: 160, Y: 30, TextSize: 30, Font: "Arial", Color: "black", Text: "Dice Roller" },
+			{ X: 187.5, Y: 325, TextSize: 30, Font: "Arial", Color: "blue", Text: "", Name: "blue player"},
+			{ X: 562.5, Y: 325, TextSize: 30, Font: "Arial", Color: "red", Text: "", Name: "red player"},
+			{ X: 75, Y: 120, TextSize: 70, Font: "Comic Sans MS, Times New Roman", Color: "black", Text: "", Name: "lblWon"}
+        ];
+        function Resize(c) {
+            w = $(document).width();
+            n = (w - c.width) / 2;
+            $(CanvasFilter).css("left", n);
+            $(AfterBlock).css("left", n);
+            $(AfterBlock).css("top", c.height + 30);
+            $(AfterBlock).width(c.width);
+        }
+        var Messages = {
+            AfterInit: Resize,
+            AfterResize: Resize
+        };
+    </script>
+    <script type="text/javascript" src="Scripts/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="Scripts/NotesSheetCoreDebug.js"></script>
+    <style type="text/css">
+        #Pad {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            border: 1px solid black;
+            margin-top: 10px;
+			background-color: #ffffff;
+        }
+        #AfterBlock {
+            position: absolute;
+            top: 930px;
+            left: 10px;
+            width: 800px;
+            margin-top: 10px;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select:none;
+			user-select:none;
+			-o-user-select:none;
+        }
+        #DevBy {
+            font-size: 12px;
+            color: black;
+            font-style: italic;
+            margin-top: 0px;
+            margin-bottom: 20px;
+            text-align: end;
+        }
+		#DevBy a {
+			font-size: 18px;
+			text-decoration: none;
+		}
+        #Fails {
+            font-size: 16px;
+            color: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <div><canvas id="Pad" width="800" height="400"></canvas></div>
+    <div id="AfterBlock">
+        <div id="DevBy">
+            Developed with <a href="http://ai.byethost9.com/" target="_blank">AI</a>'s 2D graphic engine.
+        </div>
+        <div id="Fails">
+
+        </div>
+    </div>
+</body>
+</html>

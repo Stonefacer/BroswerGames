@@ -1,0 +1,277 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+    <script type="text/javascript">
+        //////////////
+        // Settings //
+        //////////////
+        var CanvasFilter = "#Pad"; // ID of canvas which will be used to drawing.
+        var AfterBlock = "#AfterBlock";
+        var ErrorsOut = "#Fails";
+        var UpdateDelay = 40;      // Delay between updates. Recommended values: 10 - 100. Lower values - higher load CPU.
+        var TextSizeMain = 40;     // Size of text in pixels. For headers only,
+        var TextSizeData = 25;     // Size of text in pixels. For data only.
+        var FontMain = "Arial";
+        var FontData = "Arial";
+        var TextSizeScale = 0.21;
+        var LinesWidth = 5.6;      // Width of lines. Can contain floating point.
+        var CellGridSize = 60;     // Size of each cell (width and height) in notes sheet.
+		var BackgroundColor = '#ffffff';
+		var ImageFileName = "ImageFileName";	// will be used as a name of the image file when you saving canvas area
+		var PausePaint = false;
+        // Offsets indicate where different elements must be drawed.
+        var OffsetGlobal = { X: 20, Y: 20 };
+        var OffsetHeader = { X: OffsetGlobal.X - 7, Y: OffsetGlobal.Y + 50, Z: 40 };
+        var OffsetGrid = { X: OffsetGlobal.X + 5, Y: OffsetGlobal.Y + 95 };
+        var OffsetData = { X: OffsetGlobal.X - 1, Y: OffsetGlobal.Y + 133 };
+        var Flags = {
+            ShowLines: false,
+            ShowHeaders: false,
+            ShowData: false,
+            ShowBackground: true,
+            ShowCoords: false,
+            FreezeCoordinates: false,
+            ShowTextBackground: false,
+            ShowIndexes: false,
+            ShowStaticImages: true,
+            ShowStaticText: true,
+            AutoCorrect: true,
+            ShowFailMessages: true,
+            ShowPoweredBy: true,
+			ShowDices: true,
+			UseGameEngine: true,
+			UsePixelCoordinates: true
+        };
+        
+		var MyHandlers = {
+			RollDice: function(scope){
+				if (scope.GameEngine.Turn.GameOver)
+                    return;
+				scope.GetImage("btnRoll").Visible = false;
+				scope.GameEngine.Turn.Number++;
+				for(i=0;i<scope.GameEngine.Dice.AnimationSteps;i++){
+					scope.Events.AddEvent([scope.GameEngine.RandDice, scope.GameEngine.ValueChanged], i*10);
+				}
+				scope.Events.AddEvent(scope.GameEngine.SaveScore, i*10 + 1);
+				scope.Events.AddEmptyEvent();
+				////////////////////
+				// FOR DEBUG ONLY //
+				////////////////////
+				//scope.Events.AddEvent(CMD.Custom.RollDice, scope.GameEngine.Dice.AnimationSteps * 10 + 3);
+			}
+		};
+		
+		// game settings and logic
+		var GameEngine = {
+			//settings
+			Turn: {
+				Number: 0,
+				BlueScore: 0,
+				RedScore: 0,
+				GameOver: false
+			},
+			Dice:{
+				X: 335,
+				Y: 290,
+				MarginHorisontal: 5,
+				Count: 2,
+				Width: 30, 
+				Height: 30, // width and height of EACH dice
+				AnimationSteps: 10, // set 0 to disable animation
+				Images: [
+					"Images/dice1.png",
+					"Images/dice2.png",
+					"Images/dice3.png",
+					"Images/dice4.png",
+					"Images/dice5.png",
+					"Images/dice6.png"
+				],
+				GetSummaryValue: function(scope){
+					res = scope.GameEngine.Dice.Count;
+					for(i=0;i<scope.GameEngine.Dice.Count;i++){
+						res+=scope.GameEngine.Dice.Values[i];
+					}
+					return res;
+				}
+			},
+			// logic
+			Init(scope){
+				scope.GameEngine = GameEngine;
+				scope.GameEngine.Dice.Values = [0];
+				for(i=0;i<scope.GameEngine.Dice.Count-1;i++){
+					scope.GameEngine.Dice.Values.push(0);
+				}
+				// load images of dice
+				scope.GameEngine.Dice.SrcImages = {};
+				scope.GameEngine.Dice.SrcImages.State = [];
+				scope.GameEngine.Dice.SrcImages = [];
+				scope.TotalImages = 6;
+				for(i=0;i<6;i++){
+					scope.GameEngine.Dice.SrcImages[i] = new Image();
+					scope.GameEngine.Dice.SrcImages[i].src = scope.GameEngine.Dice.Images[i];
+					scope.GameEngine.Dice.SrcImages[i].onload = function(){scope.loader();};
+				}
+				// add images to StaticImages array
+				X = scope.GameEngine.Dice.X;
+				Y = scope.GameEngine.Dice.Y;
+				scope.GameEngine.Dice.StaticImages = [];
+				scope.GameEngine.Dice.Values = [];
+				for(i=0;i<scope.GameEngine.Dice.Count;i++){
+					CurrentImage = {
+						X: X,
+						Y: Y,
+						Width: scope.GameEngine.Dice.Width,
+						Height: scope.GameEngine.Dice.Height,
+						Image: scope.GameEngine.Dice.SrcImages[0]
+					};
+					StaticImages.push(CurrentImage);
+					scope.GameEngine.Dice.StaticImages[i] = CurrentImage;
+					X += scope.GameEngine.Dice.Width + scope.GameEngine.Dice.MarginHorisontal;
+					scope.GameEngine.Dice.Values[i] = 0;
+				}
+			},
+			RandDice: function(scope){
+				for(i=0;i<scope.GameEngine.Dice.Count;i++){
+					val = Math.floor(Math.random()*6);
+					scope.GameEngine.Dice.Values[i] = val;
+					scope.GameEngine.Dice.StaticImages[i].Image = scope.GameEngine.Dice.SrcImages[val];
+				}
+			},
+			SaveScore: function(scope){
+				if (scope.GameEngine.Turn.Number % 2 == 1) { // blue player
+					scope.GameEngine.Turn.BlueScore = scope.GameEngine.Dice.GetSummaryValue(scope);
+                } else { // red player
+					scope.GameEngine.Turn.RedScore = scope.GameEngine.Dice.GetSummaryValue(scope);
+				}
+				scope.GetImage("btnRoll").Visible = true;
+			},
+			ValueChanged: function(scope){
+				label = "blue player";
+				if (scope.GameEngine.Turn.Number % 2 == 0)
+					label = "red player";
+				scope.SetText(label, scope.GameEngine.Dice.GetSummaryValue(scope));
+				scope.Events.AddEmptyEvent();
+			}
+		};
+		
+        var Radius = 20;
+        var Selectors = [];
+        var SelectorsTemplate = [
+				{
+					type: "matrix",
+					X: { Start: 612, Step: 27, Count: 5 },
+					Y: [141],
+					StartGroupID: 0,
+					Images: ["Images/red_ball.png"],
+					Width: [25],
+					Height: [25],
+					RootOffsetX: [20],
+					RootOffsetY: [20]
+				},
+				{
+					type: "matrix",
+					X: { Start: 43, Step: 27, Count: 5 },
+					Y: [141],
+					StartGroupID: 6,
+					Images: ["Images/blue_ball.png"],
+					Width: [25],
+					Height: [25],
+					RootOffsetX: [20],
+					RootOffsetY: [20]
+				}
+			];
+        var Test = [];
+        var TestsTemplate = [];
+        var SizeButtons = {
+            CurrentScale: 1.00,
+            Step: 0.05,
+            Min: 0.1,
+            Max: 1.8,
+        };
+        var StaticImages = [
+			// background
+			{ X: 0, Y: 0, URL: "Images/background.png", Width: 750, Height: 360 },
+            // Scale change buttons
+            { X: 0, Y: 0, URL: "Images/btnPlus.png", Width: 40, Height: 40, Click: "Size.Plus(SizeButtons)" },
+            { X: 50, Y: 0, URL: "Images/btnMinus.png", Width: 40, Height: 40, Click: "Size.Minus(SizeButtons)" },
+			// Save button
+			{ X: 100, Y: 0, URL: "Images/save.png", Width: 40, Height: 40, Click: "Control.Save(Canvas, ImageFileName)" },
+			// Rolling button
+			{ X: 348, Y: 325, URL: "Images/rolling_button.png", Visible: true, Width: 40, Height: 22, Click: "Custom.RollDice(scope)", Name: "btnRoll" },
+        ];
+        var StaticText = [
+            //{ X: 160, Y: 30, TextSize: 30, Font: "Arial", Color: "black", Text: "Dice Roller" },
+			{ X: 187.5, Y: 325, TextSize: 30, Font: "Arial", Color: "blue", Text: "", Name: "blue player"},
+			{ X: 562.5, Y: 325, TextSize: 30, Font: "Arial", Color: "red", Text: "", Name: "red player"},
+			{ X: 75, Y: 120, TextSize: 70, Font: "Comic Sans MS, Times New Roman", Color: "black", Text: "", Name: "lblWon"}
+        ];
+        function Resize(c) {
+            w = $(document).width();
+            n = (w - c.width) / 2;
+            $(CanvasFilter).css("left", n);
+            $(AfterBlock).css("left", n);
+            $(AfterBlock).css("top", c.height + 30);
+            $(AfterBlock).width(c.width);
+        }
+        var Messages = {
+            AfterInit: Resize,
+            AfterResize: Resize,
+			BeforeInit: GameEngine.Init
+        };
+    </script>
+    <script type="text/javascript" src="Scripts/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="Scripts/NotesSheetCoreDebug.js"></script>
+    <style type="text/css">
+        #Pad {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            border: 1px solid black;
+            margin-top: 10px;
+			background-color: #ffffff;
+        }
+        #AfterBlock {
+            position: absolute;
+            top: 930px;
+            left: 10px;
+            width: 800px;
+            margin-top: 10px;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select:none;
+			user-select:none;
+			-o-user-select:none;
+        }
+        #DevBy {
+            font-size: 12px;
+            color: black;
+            font-style: italic;
+            margin-top: 0px;
+            margin-bottom: 20px;
+            text-align: end;
+        }
+		#DevBy a {
+			font-size: 18px;
+			text-decoration: none;
+		}
+        #Fails {
+            font-size: 16px;
+            color: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <div><canvas id="Pad" width="750" height="360"></canvas></div>
+    <div id="AfterBlock">
+        <div id="DevBy">
+            Developed with <a href="http://ai.byethost9.com/" target="_blank">AI</a>'s 2D graphic engine.
+        </div>
+        <div id="Fails">
+
+        </div>
+    </div>
+</body>
+</html>
